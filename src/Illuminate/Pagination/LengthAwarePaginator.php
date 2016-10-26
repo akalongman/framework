@@ -63,13 +63,6 @@ class LengthAwarePaginator extends AbstractPaginator implements Arrayable, Array
     {
         $currentPage = $currentPage ?: static::resolveCurrentPage();
 
-        // The page number will get validated and adjusted if it either less than one
-        // or greater than the last page available based on the count of the given
-        // items array. If it's greater than the last, we'll give back the last.
-        if (is_numeric($currentPage) && $currentPage > $lastPage) {
-            return $lastPage > 0 ? $lastPage : 1;
-        }
-
         return $this->isValidPageNumber($currentPage) ? (int) $currentPage : 1;
     }
 
@@ -113,6 +106,17 @@ class LengthAwarePaginator extends AbstractPaginator implements Arrayable, Array
     public function lastPage()
     {
         return $this->lastPage;
+    }
+
+    /**
+     * Render the paginator using the given presenter.
+     *
+     * @param  \Illuminate\Contracts\Pagination\Presenter|null  $presenter
+     * @return string
+     */
+    public function links(Presenter $presenter = null)
+    {
+        return $this->render($presenter);
     }
 
     /**

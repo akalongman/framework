@@ -4,6 +4,8 @@ namespace Illuminate\Pagination;
 
 use Closure;
 use ArrayIterator;
+use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Contracts\Support\Htmlable;
 
 abstract class AbstractPaginator implements Htmlable
@@ -128,8 +130,9 @@ abstract class AbstractPaginator implements Htmlable
             $parameters = array_merge($this->query, $parameters);
         }
 
-        return $this->path.'?'
-                        .urldecode(http_build_query($parameters, null, '&'))
+        return $this->path
+                        .(Str::contains($this->path, '?') ? '&' : '?')
+                        .http_build_query($parameters, '', '&')
                         .$this->buildFragment();
     }
 
@@ -236,6 +239,10 @@ abstract class AbstractPaginator implements Htmlable
      */
     public function firstItem()
     {
+        if (count($this->items) === 0) {
+            return;
+        }
+
         return ($this->currentPage - 1) * $this->perPage + 1;
     }
 
@@ -246,6 +253,10 @@ abstract class AbstractPaginator implements Htmlable
      */
     public function lastItem()
     {
+        if (count($this->items) === 0) {
+            return;
+        }
+
         return $this->firstItem() + $this->count() - 1;
     }
 
@@ -417,6 +428,19 @@ abstract class AbstractPaginator implements Htmlable
     public function getCollection()
     {
         return $this->items;
+    }
+
+    /**
+     * Set the paginator's underlying collection.
+     *
+     * @param  \Illuminate\Support\Collection  $collection
+     * @return $this
+     */
+    public function setCollection(Collection $collection)
+    {
+        $this->items = $collection;
+
+        return $this;
     }
 
     /**

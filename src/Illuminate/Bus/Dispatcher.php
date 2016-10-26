@@ -9,9 +9,8 @@ use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Bus\QueueingDispatcher;
-use Illuminate\Contracts\Bus\Dispatcher as DispatcherContract;
 
-class Dispatcher implements DispatcherContract, QueueingDispatcher
+class Dispatcher implements QueueingDispatcher
 {
     /**
      * The container implementation.
@@ -104,7 +103,9 @@ class Dispatcher implements DispatcherContract, QueueingDispatcher
      */
     public function dispatchToQueue($command)
     {
-        $queue = call_user_func($this->queueResolver);
+        $connection = isset($command->connection) ? $command->connection : null;
+
+        $queue = call_user_func($this->queueResolver, $connection);
 
         if (! $queue instanceof Queue) {
             throw new RuntimeException('Queue resolver did not return a Queue implementation.');

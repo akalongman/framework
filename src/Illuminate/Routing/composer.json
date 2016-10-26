@@ -10,7 +10,7 @@
     "authors": [
         {
             "name": "Taylor Otwell",
-            "email": "taylorotwell@gmail.com"
+            "email": "taylor@laravel.com"
         }
     ],
     "require": {
@@ -21,6 +21,7 @@
         "illuminate/pipeline": "5.2.*",
         "illuminate/session": "5.2.*",
         "illuminate/support": "5.2.*",
+        "symfony/debug": "2.8.*|3.0.*",
         "symfony/http-foundation": "2.8.*|3.0.*",
         "symfony/http-kernel": "2.8.*|3.0.*",
         "symfony/routing": "2.8.*|3.0.*"
@@ -36,7 +37,8 @@
         }
     },
     "suggest": {
-        "illuminate/console": "Required to use the make commands (5.2.*)."
+        "illuminate/console": "Required to use the make commands (5.2.*).",
+        "symfony/psr-http-message-bridge": "Required to psr7 bridging features (0.2.*)."
     },
     "minimum-stability": "dev"
 }

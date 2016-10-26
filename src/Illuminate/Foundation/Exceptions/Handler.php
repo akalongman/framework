@@ -5,13 +5,16 @@ namespace Illuminate\Foundation\Exceptions;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Illuminate\Http\Response;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Exception\HttpResponseException;
 use Symfony\Component\Debug\Exception\FlattenException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
-use Illuminate\Foundation\Validation\ValidationException;
 use Symfony\Component\Console\Application as ConsoleApplication;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Debug\ExceptionHandler as SymfonyExceptionHandler;
 use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
 
@@ -74,7 +77,9 @@ class Handler implements ExceptionHandlerContract
      */
     protected function shouldntReport(Exception $e)
     {
-        foreach ($this->dontReport as $type) {
+        $dontReport = array_merge($this->dontReport, [HttpResponseException::class]);
+
+        foreach ($dontReport as $type) {
             if ($e instanceof $type) {
                 return true;
             }
@@ -88,16 +93,20 @@ class Handler implements ExceptionHandlerContract
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Exception  $e
-     * @return \Illuminate\Http\Response
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function render($request, Exception $e)
     {
-        if ($e instanceof ModelNotFoundException) {
+        if ($e instanceof HttpResponseException) {
+            return $e->getResponse();
+        } elseif ($e instanceof ModelNotFoundException) {
             $e = new NotFoundHttpException($e->getMessage(), $e);
+        } elseif ($e instanceof AuthenticationException) {
+            return $this->unauthenticated($request, $e);
         } elseif ($e instanceof AuthorizationException) {
             $e = new HttpException(403, $e->getMessage());
-        } elseif ($e instanceof ValidationException && $e->response) {
-            return $e->response;
+        } elseif ($e instanceof ValidationException && $e->getResponse()) {
+            return $e->getResponse();
         }
 
         if ($this->isHttpException($e)) {
@@ -118,9 +127,7 @@ class Handler implements ExceptionHandlerContract
     {
         $response = new Response($response->getContent(), $response->getStatusCode(), $response->headers->all());
 
-        $response->exception = $e;
-
-        return $response;
+        return $response->withException($e);
     }
 
     /**
@@ -146,7 +153,7 @@ class Handler implements ExceptionHandlerContract
         $status = $e->getStatusCode();
 
         if (view()->exists("errors.{$status}")) {
-            return response()->view("errors.{$status}", ['exception' => $e], $status);
+            return response()->view("errors.{$status}", ['exception' => $e], $status, $e->getHeaders());
         } else {
             return $this->convertExceptionToResponse($e);
         }
@@ -167,6 +174,22 @@ class Handler implements ExceptionHandlerContract
         $decorated = $this->decorate($handler->getContent($e), $handler->getStylesheet($e));
 
         return SymfonyResponse::create($decorated, $e->getStatusCode(), $e->getHeaders());
+    }
+
+    /**
+     * Convert an authentication exception into an unauthenticated response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Auth\AuthenticationException  $e
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    protected function unauthenticated($request, AuthenticationException $e)
+    {
+        if ($request->ajax() || $request->wantsJson()) {
+            return response('Unauthorized.', 401);
+        } else {
+            return redirect()->guest('login');
+        }
     }
 
     /**

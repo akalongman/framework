@@ -22,6 +22,8 @@ class Encrypter extends BaseEncrypter implements EncrypterContract
      * @param  string  $key
      * @param  string  $cipher
      * @return void
+     *
+     * @throws \RuntimeException
      */
     public function __construct($key, $cipher = 'AES-128-CBC')
     {
@@ -54,12 +56,14 @@ class Encrypter extends BaseEncrypter implements EncrypterContract
      *
      * @param  string  $value
      * @return string
+     *
+     * @throws \Illuminate\Contracts\Encryption\EncryptException
      */
     public function encrypt($value)
     {
         $iv = random_bytes($this->getIvSize());
 
-        $value = openssl_encrypt(serialize($value), $this->cipher, $this->key, 0, $iv);
+        $value = \openssl_encrypt(serialize($value), $this->cipher, $this->key, 0, $iv);
 
         if ($value === false) {
             throw new EncryptException('Could not encrypt the data.');
@@ -70,7 +74,13 @@ class Encrypter extends BaseEncrypter implements EncrypterContract
         // authenticity. Then, we'll JSON encode the data in a "payload" array.
         $mac = $this->hash($iv = base64_encode($iv), $value);
 
-        return base64_encode(json_encode(compact('iv', 'value', 'mac')));
+        $json = json_encode(compact('iv', 'value', 'mac'));
+
+        if (! is_string($json)) {
+            throw new EncryptException('Could not encrypt the data.');
+        }
+
+        return base64_encode($json);
     }
 
     /**
@@ -78,6 +88,8 @@ class Encrypter extends BaseEncrypter implements EncrypterContract
      *
      * @param  string  $payload
      * @return string
+     *
+     * @throws \Illuminate\Contracts\Encryption\DecryptException
      */
     public function decrypt($payload)
     {
@@ -85,7 +97,7 @@ class Encrypter extends BaseEncrypter implements EncrypterContract
 
         $iv = base64_decode($payload['iv']);
 
-        $decrypted = openssl_decrypt($payload['value'], $this->cipher, $this->key, 0, $iv);
+        $decrypted = \openssl_decrypt($payload['value'], $this->cipher, $this->key, 0, $iv);
 
         if ($decrypted === false) {
             throw new DecryptException('Could not decrypt the data.');

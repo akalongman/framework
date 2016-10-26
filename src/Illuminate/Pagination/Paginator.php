@@ -76,7 +76,7 @@ class Paginator extends AbstractPaginator implements Arrayable, ArrayAccess, Cou
      */
     public function nextPageUrl()
     {
-        if ($this->hasMore) {
+        if ($this->hasMorePages()) {
             return $this->url($this->currentPage() + 1);
         }
     }
@@ -89,6 +89,17 @@ class Paginator extends AbstractPaginator implements Arrayable, ArrayAccess, Cou
     public function hasMorePages()
     {
         return $this->hasMore;
+    }
+
+    /**
+     * Render the paginator using the given presenter.
+     *
+     * @param  \Illuminate\Contracts\Pagination\Presenter|null  $presenter
+     * @return string
+     */
+    public function links(Presenter $presenter = null)
+    {
+        return $this->render($presenter);
     }
 
     /**

@@ -46,6 +46,14 @@ class TranslationTranslatorTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('foo', $t->get('foo::bar.foo'));
     }
 
+    public function testGetMethodProperlyLoadsAndRetrievesItemWithCapitalization()
+    {
+        $t = $this->getMock('Illuminate\Translation\Translator', null, [$this->getLoader(), 'en']);
+        $t->getLoader()->shouldReceive('load')->once()->with('en', 'bar', 'foo')->andReturn(['foo' => 'foo', 'baz' => 'breeze :Foo :BAR']);
+        $this->assertEquals('breeze Bar FOO', $t->get('foo::bar.baz', ['foo' => 'bar', 'bar' => 'foo'], 'en'));
+        $this->assertEquals('foo', $t->get('foo::bar.foo'));
+    }
+
     public function testGetMethodProperlyLoadsAndRetrievesItemWithLongestReplacementsFirst()
     {
         $t = $this->getMock('Illuminate\Translation\Translator', null, [$this->getLoader(), 'en']);
@@ -70,6 +78,20 @@ class TranslationTranslatorTest extends PHPUnit_Framework_TestCase
         $selector->shouldReceive('choose')->once()->with('line', 10, 'en')->andReturn('choiced');
 
         $t->choice('foo', 10, ['replace']);
+    }
+
+    public function testChoiceMethodProperlyCountsCollectionsAndLoadsAndRetrievesItem()
+    {
+        $t = $this->getMock('Illuminate\Translation\Translator', ['get'], [$this->getLoader(), 'en']);
+        $t->expects($this->exactly(2))->method('get')->with($this->equalTo('foo'), $this->equalTo(['replace']), $this->equalTo('en'))->will($this->returnValue('line'));
+        $t->setSelector($selector = m::mock('Symfony\Component\Translation\MessageSelector'));
+        $selector->shouldReceive('choose')->twice()->with('line', 3, 'en')->andReturn('choiced');
+
+        $values = ['foo', 'bar', 'baz'];
+        $t->choice('foo', $values, ['replace']);
+
+        $values = new Illuminate\Support\Collection(['foo', 'bar', 'baz']);
+        $t->choice('foo', $values, ['replace']);
     }
 
     protected function getLoader()

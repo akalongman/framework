@@ -171,7 +171,7 @@ class SessionStoreTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('bar', $session->get('foo'));
         $this->assertEquals(0, $session->get('bar'));
 
-        $session->removeFlashNowData();
+        $session->ageFlashData();
 
         $this->assertFalse($session->has('foo'));
         $this->assertNull($session->get('foo'));
@@ -197,6 +197,15 @@ class SessionStoreTest extends PHPUnit_Framework_TestCase
         $session = $this->getSession();
         $session->flash('foo', 'bar');
         $session->set('flash.old', ['foo']);
+        $session->reflash();
+        $this->assertNotFalse(array_search('foo', $session->get('flash.new')));
+        $this->assertFalse(array_search('foo', $session->get('flash.old')));
+    }
+
+    public function testReflashWithNow()
+    {
+        $session = $this->getSession();
+        $session->now('foo', 'bar');
         $session->reflash();
         $this->assertNotFalse(array_search('foo', $session->get('flash.new')));
         $this->assertFalse(array_search('foo', $session->get('flash.old')));
@@ -242,6 +251,40 @@ class SessionStoreTest extends PHPUnit_Framework_TestCase
         $this->assertFalse($session->getBag('bagged')->has('qu'));
     }
 
+    public function testIncrement()
+    {
+        $session = $this->getSession();
+
+        $session->set('foo', 5);
+        $foo = $session->increment('foo');
+        $this->assertEquals(6, $foo);
+        $this->assertEquals(6, $session->get('foo'));
+
+        $foo = $session->increment('foo', 4);
+        $this->assertEquals(10, $foo);
+        $this->assertEquals(10, $session->get('foo'));
+
+        $session->increment('bar');
+        $this->assertEquals(1, $session->get('bar'));
+    }
+
+    public function testDecrement()
+    {
+        $session = $this->getSession();
+
+        $session->set('foo', 5);
+        $foo = $session->decrement('foo');
+        $this->assertEquals(4, $foo);
+        $this->assertEquals(4, $session->get('foo'));
+
+        $foo = $session->decrement('foo', 4);
+        $this->assertEquals(0, $foo);
+        $this->assertEquals(0, $session->get('foo'));
+
+        $session->decrement('bar');
+        $this->assertEquals(-1, $session->get('bar'));
+    }
+
     public function testHasOldInputWithoutKey()
     {
         $session = $this->getSession();
@@ -258,10 +301,10 @@ class SessionStoreTest extends PHPUnit_Framework_TestCase
         $this->assertFalse($session->handlerNeedsRequest());
         $session->getHandler()->shouldReceive('setRequest')->never();
 
-        $session = new \Illuminate\Session\Store('test', m::mock(new \Illuminate\Session\CookieSessionHandler(new \Illuminate\Cookie\CookieJar(), 60)));
+        $session = new Illuminate\Session\Store('test', m::mock(new Illuminate\Session\CookieSessionHandler(new Illuminate\Cookie\CookieJar(), 60)));
         $this->assertTrue($session->handlerNeedsRequest());
         $session->getHandler()->shouldReceive('setRequest')->once();
-        $request = new \Symfony\Component\HttpFoundation\Request();
+        $request = new Symfony\Component\HttpFoundation\Request();
         $session->setRequestOnHandler($request);
     }
 
